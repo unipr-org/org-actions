@@ -1,1 +1,110 @@
 # org-actions
+
+---
+
+## Descrizione generale
+
+La repository in questione è stata pensata per raggruppare tutte le action che verranno utilizzate all'interno dell'organizzazione.
+
+La struttura attuale della cartella è:
+```bash
+.
+├── README.md
+├── shared_actions
+│  ├── issues_slack_notify.yml
+│  └── pr_slack_notify.yml
+└── sync_submodule_action.yml
+```
+
+
+---
+## Utilizzo all'interno delle altre repository dell'organizzazione
+
+Come prima cosa è necessario aggiungere all'interno della repository un submodule:
+```bash
+git submodule add https://github.com/unipr-org/org-actions actions_submodule
+```
+
+> Vedi [wiki git](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
+
+Successivamente bisogna copiare il file `sync_submodule_action.yml` all'interno della folder `.github/workflows/`
+
+
+_contenuto del file sync_submodule_action.yml_
+```bash
+name: Sync submodule
+
+on:
+  push:
+    branches:
+      - main
+permissions:
+  actions: write
+  contents: write
+  
+jobs:
+  sync-submodule:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.WORKFLOW_TOKEN }}
+
+      - name: Aggiunta variabili ambiente
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+          
+      - name: Aggiornamento submodule
+        run: |
+          git submodule update --init --recursive
+          git submodule update --recursive --remote
+          
+      - name: Copia file da actions_submodule
+        run: |
+          cp -r ./actions_submodule/shared_actions/* ./.github/workflows/
+          git add ./.github/workflows/
+          git diff --exit-code --quiet || git commit -m "@sync_submodule_action: Copia automatica di file da ./org-actions/shared_actions/* a ./.github/workflows/"
+      
+      - name: Push submodule
+        run: |
+          git push origin main
+      
+```
+
+In questo modo ad ogni evento di tipo "push", la repository a cui è stata aggiunta questa action verrà aggiornata con gli ultimi moduli messi a disposizione all'interno della folder `shared_modules`
+
+> secrets.WORKFLOW_TOKEN è un access token privato
+### Actions permissions
+
+Potrebbe essere necessario modificare i permessi per delle action all'interno della repository. Andare in `Settings -> Actions -> General -> Actions permissions` e selezionare la voce "Allow all actions and reusable workflows"
+
+---
+## Actions presenti
+
+
+### Actions slack
+
+- issues_slack_notify
+- pr_slack_notify
+
+> Per maggiori informazioni [Slack interaction]([https://github.com/marketplace/actions/post-slack-message](https://github.com/marketplace/actions/post-slack-message "https://github.com/marketplace/actions/post-slack-message"))
+
+
+---
+## Altri link
+
+#### [Secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions)
+#### [Access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+
+
+---
+
+Contributions
+
+<a href="https://github.com/unipr-org/org-actions/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=unipr-org/org-actions" />
+</a>
