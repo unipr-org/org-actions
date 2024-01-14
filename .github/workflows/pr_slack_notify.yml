@@ -1,0 +1,17 @@
+name: Notify PR slack
+
+on:
+  pull_request:
+    types:
+      - opened
+
+jobs:
+  notify-pr-slack:
+    runs-on: ubuntu-latest
+    env:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+    steps:
+      - name: Post Slack messages
+        uses: abinoda/slack-action@v1.0.9
+        with:
+          args: '{\"channel\":\"C06E6GVTPBK\",\"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"Nuova PR\n*<${{ github.event.pull_request.html_url }}|Vai alla PR>*\"}},{\"type\":\"section\",\"fields\":[{\"type\":\"mrkdwn\",\"text\":\"*Autor:*\n@${{ github.actor }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Repository:*\n${{ github.repository }}\"},{\"type\":\"mrkdwn\",\"text\":\"*PR title:*\n${{ github.event.pull_request.title }}\"}]}]}'
