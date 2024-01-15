@@ -14,20 +14,25 @@ La struttura attuale della cartella è:
    └── sync_submodule_action.yml
 ```
 
-È fondamentale che tutte le action presenti in `shared_actions` siano funzionanti e non presentino errori. Nel caso in cui questo vincolo non sia rispettato la action malfunzionante verrà propagata all'interno di tutte le repository che utilizzano prg-actions come submodule
+## Attenzione
+
+- È fondamentale che tutte le action presenti in `shared_actions` siano funzionanti e non presentino errori. Nel caso in cui questo vincolo non sia rispettato la action malfunzionante verrà propagata all'interno di tutte le repository che utilizzano prg-actions come submodule.
+
+- È molto importante che le actions mantengano sempre lo stesso nome
 
 ## Utilizzo all'interno delle altre repository dell'organizzazione
 
-Come prima cosa è necessario aggiungere all'interno della repository un submodule:
+1. Aggiungere all'interno della repository un submodule:
 ```bash
 git submodule add https://github.com/unipr-org/org-actions actions_submodule
 ```
 
 > Vedi [wiki git](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
 
-Successivamente bisogna copiare il file `shared_actions/sync_submodule_action.yml` all'interno della folder `.github/workflows/`
+2. Copiare il file `shared_actions/sync_submodule_action.yml` all'interno della folder `.github/workflows/` mantenendo il nome `sync_submodule_action.yml`
 
-> Il posizionamento del file `sync_submodule_action.yml` all'interno della cartella shared_actions è intenzionale. Ogni volta che una repository aggiorna le action "ereditate" dalla repository "org-actions" andrà ad aggiornare anche quella che si occupa della sincronizzazione
+
+> Il posizionamento del file `sync_submodule_action.yml` all'interno della cartella shared_actions (della repository org-actions) è intenzionale. Ogni volta che una repository aggiorna le action "ereditate" dalla repository "org-actions" andrà ad aggiornare anche quella che si occupa della sincronizzazione
 
 _contenuto del file sync_submodule_action.yml_
 ```bash
@@ -56,35 +61,32 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
       
-      - name: Rimozione file
-        run: |
-          ls -la .github/workflows/
-          find ./org-actions/shared_actions/ -type f -exec sh -c '
-            file="{}"
-            destination="./.github/workflows/$(basename "$file")"
-            [ -e "$destination" ] && rm "$destination"
-          ' \;
-          ls -la .github/workflows/
-          
       - name: Aggiornamento submodule
         run: |
           git submodule update --init --recursive
           git submodule update --recursive --remote
-          
+          git add ./actions_submodule
+          git diff --exit-code --quiet || git commit -m "@sync_submodule_action: Aggiornamento actions_submodule"
+
       - name: Copia file da actions_submodule
         run: |
           cp -r ./actions_submodule/shared_actions/* ./.github/workflows/
           git add ./.github/workflows/
           git diff --exit-code --quiet || git commit -m "@sync_submodule_action: Copia automatica di file da ./org-actions/shared_actions/* a ./.github/workflows/"
-      
+
       - name: Push submodule
         run: |
-          git push origin main
+          if [ "${{ github.actor }}" != "github-actions" ]; then
+            git push origin main
+          else
+            echo "No push: actions-triggered"
+          fi
 ```
 
 In questo modo ad ogni evento di tipo "push", la repository a cui è stata aggiunta questa action verrà aggiornata con gli ultimi moduli messi a disposizione all'interno della folder `shared_modules`
 
 > secrets.WORKFLOW_TOKEN è un access token privato
+
 ### Actions permissions
 
 Potrebbe essere necessario modificare i permessi per delle action all'interno della repository. Andare in `Settings -> Actions -> General -> Actions permissions` e selezionare la voce "Allow all actions and reusable workflows"
