@@ -8,12 +8,13 @@ La struttura attuale della cartella è:
 ```bash
 .
 ├── README.md
-├── shared_actions
-│  ├── issues_slack_notify.yml
-│  └── pr_slack_notify.yml
-└── sync_submodule_action.yml
+└── shared_actions
+   ├── issues_slack_notify.yml
+   ├── pr_slack_notify.yml
+   └── sync_submodule_action.yml
 ```
 
+È fondamentale che tutte le action presenti in `shared_actions` siano funzionanti e non presentino errori. Nel caso in cui questo vincolo non sia rispettato la action malfunzionante verrà propagata all'interno di tutte le repository che utilizzano prg-actions come submodule
 
 ## Utilizzo all'interno delle altre repository dell'organizzazione
 
@@ -24,8 +25,9 @@ git submodule add https://github.com/unipr-org/org-actions actions_submodule
 
 > Vedi [wiki git](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
 
-Successivamente bisogna copiare il file `sync_submodule_action.yml` all'interno della folder `.github/workflows/`
+Successivamente bisogna copiare il file `shared_actions/sync_submodule_action.yml` all'interno della folder `.github/workflows/`
 
+> Il posizionamento del file `sync_submodule_action.yml` all'interno della cartella shared_actions è intenzionale. Ogni volta che una repository aggiorna le action "ereditate" dalla repository "org-actions" andrà ad aggiornare anche quella che si occupa della sincronizzazione
 
 _contenuto del file sync_submodule_action.yml_
 ```bash
@@ -53,7 +55,16 @@ jobs:
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-
+      
+      - name: Rimozione file
+        run: |
+          ls -la .github/workflows/
+          find ./org-actions/shared_actions/ -type f -exec sh -c '
+            file="{}"
+            destination="./.github/workflows/$(basename "$file")"
+            [ -e "$destination" ] && rm "$destination"
+          ' \;
+          ls -la .github/workflows/
           
       - name: Aggiornamento submodule
         run: |
@@ -69,7 +80,6 @@ jobs:
       - name: Push submodule
         run: |
           git push origin main
-      
 ```
 
 In questo modo ad ogni evento di tipo "push", la repository a cui è stata aggiunta questa action verrà aggiornata con gli ultimi moduli messi a disposizione all'interno della folder `shared_modules`
