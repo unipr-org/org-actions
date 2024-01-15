@@ -23,16 +23,6 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
       
-      - name: Rimozione file
-        run: |
-          ls -la .github/workflows/
-          find ./org-actions/shared_actions/ -type f -exec sh -c '
-            file="{}"
-            destination="./.github/workflows/$(basename "$file")"
-            [ -e "$destination" ] && rm "$destination"
-          ' \;
-          ls -la .github/workflows/
-          
       - name: Aggiornamento submodule
         run: |
           git submodule update --init --recursive
